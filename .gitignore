@@ -1,0 +1,44 @@
+# --- Secrets -------------------------------------------------------------
+# Never remove this line. See .env.example for the variable names.
+.env
+.window/env
+
+# --- Python --------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+wheels/
+
+# --- Virtual environment -------------------------------------------------
+.venv/
+.window/.venv/
+
+# --- Tooling caches ------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# --- macOS ---------------------------------------------------------------
+.DS_Store
+
+# --- Corpus and build artefacts ------------------------------------------
+# Too large for git, and reproducible: data/raw from data/manifest.jsonl,
+# everything downstream by re-running the pipeline. The .gitkeep negations
+# keep the directory structure in the repo without its contents.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+indexes/*
+!indexes/.gitkeep
+*.faiss
+chroma/
+
+# --- Model cache ---------------------------------------------------------
+# Fetched by scripts/fetch_models.py; ~4.6 GB.
+models/
