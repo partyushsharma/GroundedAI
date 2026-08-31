@@ -1,5 +1,7 @@
-# scripts/test_ocr.py
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from ingest.parse import extract_pdf
 
 pdf_path = Path("data/raw/29MD8B47C911ECA14450AACBAEF6D7981EF8.pdf")

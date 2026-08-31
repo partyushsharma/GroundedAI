@@ -1,4 +1,7 @@
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # project root
+
 from ingest.parse import extract_with_pymupdf
 
 def test_extract_clean_pdf():

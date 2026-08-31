@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 import fitz
 from pathlib import Path
 import logging
@@ -105,6 +106,7 @@ def extract_pdf(pdf_path: Path, force_tier: str = None) -> dict:
         # We'll let the caller handle the crash (task 1.4 will add tier 3)
         logger.warning(f"Tier 2 crashed on {pdf_path.name}: {e}. Trying Tesseract.")
 
+    # ---- Tier 3 ----
     try:
         text_t3 = extract_with_tesseract(pdf_path)
         # Tesseract may still be messy, but we accept it as the final attempt
