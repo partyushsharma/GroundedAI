@@ -7,6 +7,8 @@ from pdf2image import convert_from_path
 import pytesseract
 
 
+
+
 logger = logging.getLogger(__name__)
 
 # ---- Tier 1 ----
@@ -141,3 +143,101 @@ def extract_with_tesseract(pdf_path: Path, dpi: int = 300) -> str:
     except Exception as e:
         logger.error(f"Tesseract failed on {pdf_path}: {e}")
         raise RuntimeError(f"Tesseract extraction failed: {e}") from e
+
+# --- STEP 1.5 Logging --- 
+def extract_page_pymupdf(pdf_path: Path, page_num: int) -> str:
+    """Extract text from a specific page using PyMuPDF."""
+    doc = fitz.open(pdf_path)
+    page = doc[page_num]   # 0‑based index
+    text = page.get_text()
+    doc.close()
+    return text
+
+# Page‑level Docling (Tier 2)
+# Docling normally processes the whole document. To avoid re‑processing the whole PDF for each page,
+# we process the PDF once and cache the page‑wise results. Write a function that returns a list of page texts (one per page):
+def extract_all_pages_docling(pdf_path: Path) -> list[str]:
+    """Run Docling once and return a list of page texts."""
+    converter = DocumentConverter()
+    result = converter.convert(pdf_path)
+    # Docling stores pages as a dict; we sort by page number
+    pages = sorted(result.document.pages.items(), key=lambda x: x[0])
+    return [page.text for _, page in pages]
+
+# Page‑level Tesseract (Tier 3)
+# Use pdf2image to convert only one page at a time to an image, then OCR it:
+def extract_page_tesseract(pdf_path: Path, page_num: int, dpi: int = 300) -> str:
+    """OCR a single page using Tesseract."""
+    images = convert_from_path(pdf_path, first_page=page_num+1, last_page=page_num+1, dpi=dpi)
+    if not images:
+        return ""
+    text = pytesseract.image_to_string(images[0], lang='eng')
+    return text
+
+# Write a page‑aware orchestrator
+# This function:
+# Gets the total page count (using PyMuPDF).
+# Tier 1 – extracts all pages with PyMuPDF and checks each page’s quality.
+# Tier 2 – if any page is poor, runs Docling once and overwrites those pages (mapping by index).
+# Tier 3 – if any page is still poor, runs Tesseract only on those remaining poor pages.
+def extract_pdf_with_page_tiers(pdf_path: Path) -> tuple[list[str], list[str]]:
+    """
+    Returns:
+      - page_texts: list of strings, one per page.
+      - page_tiers: list of tier names ('pymupdf', 'docling', 'tesseract'), same length.
+    """
+    # Get page count
+    doc = fitz.open(pdf_path)
+    page_count = len(doc)
+    doc.close()
+
+    # ---- Tier 1: PyMuPDF per page ----
+    page_texts = [None] * page_count
+    page_tiers = [None] * page_count
+    poor_indices = []
+
+    for i in range(page_count):
+        text = extract_page_pymupdf(pdf_path, i)
+        page_texts[i] = text
+        if is_extraction_poor(text):
+            poor_indices.append(i)
+            page_tiers[i] = "pending"
+        else:
+            page_tiers[i] = "pymupdf"
+
+    # If all pages are fine, return early
+    if not poor_indices:
+        return page_texts, page_tiers
+
+    # ---- Tier 2: Docling (only if we have poor pages) ----
+    try:
+        docling_page_texts = extract_all_pages_docling(pdf_path)
+        # Docling should have the same number of pages
+        if len(docling_page_texts) == page_count:
+            for i in poor_indices:
+                text = docling_page_texts[i]
+                if not is_extraction_poor(text, min_chars=100):  # Docling may return empty on scans
+                    page_texts[i] = text
+                    page_tiers[i] = "docling"
+            # Update poor_indices to keep only those still bad
+            still_poor = [i for i in poor_indices if page_tiers[i] == "pending"]
+            poor_indices = still_poor
+        else:
+            # Docling returned different page count – fallback to Tesseract for all poor pages
+            pass
+    except Exception as e:
+        logger.warning(f"Docling failed entirely for {pdf_path.name}: {e}")
+
+    # ---- Tier 3: Tesseract (for any remaining poor pages) ----
+    for i in poor_indices:
+        try:
+            text = extract_page_tesseract(pdf_path, i)
+            page_texts[i] = text
+            page_tiers[i] = "tesseract"
+        except Exception as e:
+            # Last resort: leave as empty text, mark tier as 'failed'
+            logger.error(f"Tesseract also failed on page {i} of {pdf_path.name}: {e}")
+            page_texts[i] = ""
+            page_tiers[i] = "failed"
+
+    return page_texts, page_tiers
