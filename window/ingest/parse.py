@@ -5,7 +5,7 @@ import logging
 from docling.document_converter import DocumentConverter
 from pdf2image import convert_from_path
 import pytesseract
-
+from ingest.models import ChunkMeta
 
 
 
@@ -241,3 +241,9 @@ def extract_pdf_with_page_tiers(pdf_path: Path) -> tuple[list[str], list[str]]:
             page_tiers[i] = "failed"
 
     return page_texts, page_tiers
+
+
+def create_basic_meta(pdf_name: str, page_number: int, **kwargs) -> ChunkMeta:
+    """Create a ChunkMeta instance with only the bare essentials."""
+    return ChunkMeta(pdf_name=pdf_name, page_number=page_number, **kwargs)
+
