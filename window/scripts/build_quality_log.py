@@ -16,7 +16,7 @@ output_file.parent.mkdir(parents=True, exist_ok=True)
 tier_counter = {"pymupdf": 0, "docling": 0, "tesseract": 0, "failed": 0}
 
 with open(output_file, "w") as f_out:
-    for pdf_path in raw_dir.glob("*.pdf"):
+    for pdf_path in [p for p in raw_dir.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"]:
         try:
             page_texts, page_tiers = extract_pdf_with_page_tiers(pdf_path)
             for i, (text, tier) in enumerate(zip(page_texts, page_tiers)):

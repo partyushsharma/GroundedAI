@@ -4,7 +4,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from ingest.parse import extract_pdf
 
-pdf_path = Path("data/raw/29MD8B47C911ECA14450AACBAEF6D7981EF8.pdf")
-result = extract_pdf(pdf_path)
-print(f"Tier used: {result['tier_used']}")
-print(f"Text preview (first 500 chars):\n{result['text'][:500]}")
+def test_ocr():
+    pdf_path = Path("data/raw/06MDE170516F633150EBCFE438084174F7DECCDC20C.PDF")
+    if not pdf_path.exists():
+        return
+    result = extract_pdf(pdf_path)
+    assert result is not None
+    assert "text" in result
+    assert "tier_used" in result

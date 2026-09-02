@@ -74,13 +74,32 @@ for pkg_name, import_name in REQUIRED:
         fail(f"package  {pkg_name}", f"not installed – run: uv pip install {pkg_name}")
 
 # ── 3. Tesseract binary ────────────────────────────────────────────────────
+_TESSERACT_FALLBACKS = [
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    r"C:\Users\ankit\AppData\Local\Programs\Tesseract-OCR\tesseract.exe",
+    r"D:\Software\Tesseract-OCR\tesseract.exe",
+    r"D:\Software\tesseract\tesseract.exe",
+]
+
+def _find_tesseract():
+    import shutil
+    exe = shutil.which("tesseract")
+    if exe:
+        return exe, True
+    for candidate in _TESSERACT_FALLBACKS:
+        if os.path.isfile(candidate):
+            return candidate, False
+    raise FileNotFoundError("tesseract not found on PATH or known fallback locations")
+
 try:
+    exe, on_path = _find_tesseract()
     result = subprocess.run(
-        ["tesseract", "--list-langs"],
+        [exe, "--list-langs"],
         capture_output=True, text=True, timeout=10
     )
     if "eng" in result.stdout + result.stderr:
-        ok("Tesseract binary", "eng language found")
+        ok("Tesseract binary", f"eng language found ({exe})")
     else:
         fail("Tesseract binary", "installed but 'eng' language pack missing")
 except FileNotFoundError:
