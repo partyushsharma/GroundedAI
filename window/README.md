@@ -59,6 +59,22 @@ Below is the list of key packages in the environment, their direct dependencies,
   - **Why Added**: Machine learning backend models for Docling table structure and layout detection.
 
 ---
+## 6. Embeddings & Vector Store
+- **`sentence-transformers`**
+  - **Why Added**: High-performance library for generating semantic embeddings from text.
+  - **Key Dependencies**: `numpy`, `torch`, `huggingface_hub`, `tokenizers`.
+- **`faiss-cpu`**
+  - **Why Added**: Facebook AI Similarity Search for efficient nearest-neighbor search (ANN) and clustering of embeddings.
+  - **Key Dependencies**: `numpy`, `scipy`.
+- **`chromadb`**
+  - **Why Added**: Lightweight, easy-to-use vector database for storing and querying embeddings in the hybrid RAG pipeline.
+  - **Key Dependencies**: `numpy`, `tiktoken`, `pydantic`, `hnswlib`.
+
+## 7. Deduplication
+
+- **`datasketch`**
+  - **Why Added**: High-performance MinHash and LSH (Locality Sensitive Hashing) implementation for efficient similarity search and duplicate detection.
+  - **Key Dependencies**: `numpy`, `scipy`.
 
 ## ⚙️ System Binaries
 
