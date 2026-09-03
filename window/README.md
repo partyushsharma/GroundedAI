@@ -117,3 +117,5 @@ All currently installed dependencies are pinned in `requirements.txt`:
 ```bash
 pip install -r requirements.txt
 ```
+
+Added:google-generativeai python-dotenv
