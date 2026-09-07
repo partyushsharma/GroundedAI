@@ -81,8 +81,8 @@ build-backend = "uv_build"
 constraint-dependencies = ["langchain-community<0.4"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
+testpaths = ["tests", "window/tests"]
+pythonpath = ["src", ".", "window"]
 
 # spaCy models are not on PyPI under a resolvable version range, so they are
 # declared as explicit sources. Presidio needs en_core_web_sm at minimum.
