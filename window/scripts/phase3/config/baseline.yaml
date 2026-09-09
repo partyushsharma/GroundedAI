@@ -1,0 +1,30 @@
+# General
+experiment_name: "baseline_dense_flat"
+description: "Dense retrieval only with FAISS Flat (exact cosine)"
+
+# Embedding
+embedding_model: "BAAI/bge-base-en-v1.5"
+normalize_embeddings: true
+
+# Index
+index_type: "flat"      # flat, hnsw, ivf
+faiss_index_path: "data/indexes/faiss.index"   # pre-built index
+chroma_collection: "rbi_chunks"   # for comparison (optional)
+
+# Retrieval
+retrieval_type: "dense"          # dense, sparse, hybrid
+hybrid_fusion: null              # null for dense only
+sparse_index_path: null          # for BM25
+retrieve_k: 100                  # number of candidates to retrieve
+reranker: null                   # no reranking for baseline
+rerank_top_n: null               # number of final results
+
+# Query transform
+query_transform: null            # null, hyde, multi_query, decomposition
+
+# Diversity
+diversity_filter: null           # null, mmr
+mmr_lambda: null
+
+# Evaluation
+k_values: [1, 5, 10, 20]
