@@ -86,7 +86,23 @@ def main():
     args = parser.parse_args()
     
     if args.config:
-        run_experiment(Path(args.config))
+        config_path = Path(args.config)
+        # If the path doesn't exist as given (relative to cwd), try a series
+        # of fallback base directories so common invocation styles all work:
+        #   hybrid_rrf.yaml              → SCRIPT_DIR/hybrid_rrf.yaml
+        #   phase3/config/hybrid_rrf.yaml → PROJECT_ROOT/scripts/phase3/...
+        #   scripts/phase3/config/...    → PROJECT_ROOT/scripts/phase3/...
+        if not config_path.exists():
+            fallbacks = [
+                SCRIPT_DIR / config_path,
+                PROJECT_ROOT / "scripts" / config_path,
+                PROJECT_ROOT / config_path,
+            ]
+            for candidate in fallbacks:
+                if candidate.exists():
+                    config_path = candidate
+                    break
+        run_experiment(config_path)
     elif args.all:
         for config_path in SCRIPT_DIR.glob("*.yaml"):
             run_experiment(config_path)

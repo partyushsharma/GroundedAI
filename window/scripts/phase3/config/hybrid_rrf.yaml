@@ -1,0 +1,29 @@
+# Task 3.3 ####################################################
+# Now you'll combine dense and sparse retrieval using Reciprocal Rank Fusion (RRF). This is a simple but powerful method that merges two ranked lists 
+# based on their positions, ignoring the raw scores.
+# The key insight: dense and sparse scores are on different scales – averaging them is wrong.
+#  RRF sidesteps this by using only the rank positions.
+################################################################
+
+experiment_name: "hybrid_rrf_k60"
+description: "Hybrid retrieval: Dense + BM25 with RRF fusion (k=60)"
+
+embedding_model: "BAAI/bge-base-en-v1.5"
+normalize_embeddings: true
+
+index_type: "flat"
+faiss_index_path: "data/indexes/faiss.index"
+
+retrieval_type: "hybrid"
+hybrid_fusion: "rrf"
+rrf_k: 60
+sparse_index_path: "data/indexes/bm25_index"
+retrieve_k: 20   # final number of results after fusion
+
+reranker: null
+rerank_top_n: null
+
+query_transform: null
+diversity_filter: null
+
+k_values: [1, 5, 10, 20]
