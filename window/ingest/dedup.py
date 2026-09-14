@@ -13,10 +13,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# ---------- Configuration ----------
 NUM_PERM = 128          # Number of hash functions – higher = more accurate, slower
 THRESHOLD = 0.85        # Jaccard similarity threshold (0.85 = 85% similar)
-# -----------------------------------
 
 def tokenize(text: str) -> Set[str]:
     """
@@ -24,9 +22,7 @@ def tokenize(text: str) -> Set[str]:
     We use word-level shingles (5-grams) to capture phrasing, not just exact words.
     This is more robust than character shingles for regulatory text.
     """
-    # Clean text: lower case, remove punctuation, split into words
     words = re.findall(r'\b[a-z0-9]+\b', text.lower())
-    # Use 5-gram shingles (order matters)
     shingles = set()
     for i in range(len(words) - 4):
         shingle = " ".join(words[i:i+5])
@@ -58,7 +54,6 @@ def deduplicate_chunks(input_path: Path, output_path: Path) -> Tuple[int, int]:
     
     # 2. Build LSH index
     lsh = MinHashLSH(threshold=THRESHOLD, num_perm=NUM_PERM)
-    # We'll store a mapping from chunk index to MinHash
     minhashes = []
     
     for idx, chunk in enumerate(chunks):
@@ -68,7 +63,6 @@ def deduplicate_chunks(input_path: Path, output_path: Path) -> Tuple[int, int]:
             continue
         m = get_minhash(text)
         minhashes.append(m)
-        # Insert into LSH (using string ID)
         lsh.insert(str(idx), m)
     
     # 3. Find duplicate groups

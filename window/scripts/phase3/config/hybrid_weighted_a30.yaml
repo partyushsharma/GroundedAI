@@ -1,0 +1,22 @@
+experiment_name: "hybrid_weighted_alpha0.3"
+description: "Hybrid Dense + BM25 with weighted score fusion (alpha=0.3, favouring BM25)"
+
+embedding_model: "BAAI/bge-base-en-v1.5"
+normalize_embeddings: true
+
+index_type: "flat"
+faiss_index_path: "data/indexes/faiss.index"
+
+retrieval_type: "hybrid"
+hybrid_fusion: "weighted"
+weighted_alpha: 0.3
+sparse_index_path: "data/indexes/bm25_index"
+retrieve_k: 20
+
+reranker: null
+rerank_top_n: null
+
+query_transform: null
+diversity_filter: null
+
+k_values: [1, 5, 10, 20]

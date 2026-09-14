@@ -13,13 +13,13 @@ def get_naive_splitter(chunk_size: int = 512, overlap_tokens: int = 51):
     Returns a RecursiveCharacterTextSplitter that splits by token count.
     overlap_tokens is 10% of 512 = 51 (we round to nearest int).
     """
-    encoding = tiktoken.get_encoding("cl100k_base")  # GPT-4 tokeniser; safe proxy for BGE/E5
+    encoding = tiktoken.get_encoding("cl100k_base")
     
     splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base",
         chunk_size=chunk_size,
         chunk_overlap=overlap_tokens,
-        separators=["\n\n", "\n", ". ", " ", ""],  # respects paragraphs, sentences, words
+        separators=["\n\n", "\n", ". ", " ", ""],
         keep_separator=False,
     )
     return splitter
@@ -37,7 +37,7 @@ def chunk_text(text: str, metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
         record = {
             "text": chunk,
             "meta": {
-                **metadata,  # pdf_name, page_number, etc. from ChunkMeta
+                **metadata,
                 "chunk_index": i,
                 "total_chunks_in_doc": len(chunks),
             }

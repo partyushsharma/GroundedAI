@@ -72,6 +72,52 @@ class RetrievalPipeline:
         sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
         return sorted_ids
     
+    def _normalise_scores(self, scores: np.ndarray) -> np.ndarray:
+        """
+        Min-max normalisation to [0, 1].
+        If all scores are equal, return all zeros (avoid divide-by-zero).
+        """
+        min_s = scores.min()
+        max_s = scores.max()
+        if max_s - min_s < 1e-9:
+            return np.zeros_like(scores)
+        return (scores - min_s) / (max_s - min_s)
+
+    def _weighted_score_fusion(
+        self,
+        dense_ids: list[int],
+        dense_scores: np.ndarray,
+        sparse_ids: list[int],
+        sparse_scores: np.ndarray,
+        alpha: float = 0.5
+    ) -> list[int]:
+        """
+        Weighted score fusion:
+            score(doc) = alpha * dense_norm(doc) + (1 - alpha) * sparse_norm(doc)
+        Documents present in only one list get a score of 0 from the other list.
+        """
+        # Normalise both score arrays to [0, 1]
+        dense_norm = self._normalise_scores(np.array(dense_scores, dtype=np.float32))
+        sparse_norm = self._normalise_scores(np.array(sparse_scores, dtype=np.float32))
+        
+        # Build score dictionaries
+        dense_score_map = {doc_id: dense_norm[i] for i, doc_id in enumerate(dense_ids)}
+        sparse_score_map = {doc_id: sparse_norm[i] for i, doc_id in enumerate(sparse_ids)}
+        
+        # Union of all doc IDs
+        all_doc_ids = set(dense_score_map.keys()) | set(sparse_score_map.keys())
+        
+        # Blend scores
+        fused_scores = {}
+        for doc_id in all_doc_ids:
+            d_score = dense_score_map.get(doc_id, 0.0)
+            s_score = sparse_score_map.get(doc_id, 0.0)
+            fused_scores[doc_id] = alpha * d_score + (1 - alpha) * s_score
+        
+        # Sort descending
+        sorted_ids = sorted(fused_scores.keys(), key=lambda x: fused_scores[x], reverse=True)
+        return sorted_ids
+        
     def retrieve(self, query: str, k: int) -> list[int]:
         if self.config.retrieval_type == "dense":
             emb = self.model.encode(
@@ -85,35 +131,50 @@ class RetrievalPipeline:
             if self.bm25 is None:
                 raise ValueError("BM25 index not loaded. Check sparse_index_path.")
             query_tokens = self._tokenize_query(query)
-            results, _ = self.bm25.retrieve(query_tokens, k=k)
-            return results[0].tolist()
+            results = self.bm25.retrieve(query_tokens, k=k, return_as="tuple")
+            # bm25s returns (doc_ids, scores) when return_as="tuple"
+            doc_ids, _ = results
+            return doc_ids[0].tolist()
         
         elif self.config.retrieval_type == "hybrid":
             if self.bm25 is None:
                 raise ValueError("BM25 index not loaded for hybrid retrieval.")
             
-            # Retrieve more candidates from each retriever (e.g., 2x k)
             dense_k = min(k * 2, 200)
             sparse_k = min(k * 2, 200)
             
-            # Get dense results
+            # ---- Dense retrieval (with scores) ----
             emb = self.model.encode(
                 [query], 
                 normalize_embeddings=self.config.normalize_embeddings
             ).astype('float32')
-            distances, dense_indices = self.faiss_index.search(emb, dense_k)
+            dense_distances, dense_indices = self.faiss_index.search(emb, dense_k)
             dense_ids = dense_indices[0].tolist()
+            dense_scores = dense_distances[0]  # cosine similarity scores
             
-            # Get sparse results
+            # ---- Sparse retrieval (with scores) ----
             query_tokens = self._tokenize_query(query)
-            sparse_results, _ = self.bm25.retrieve(query_tokens, k=sparse_k)
-            sparse_ids = sparse_results[0].tolist()
+            sparse_result = self.bm25.retrieve(query_tokens, k=sparse_k, return_as="tuple")
+            sparse_ids_raw, sparse_scores_raw = sparse_result
+            sparse_ids = sparse_ids_raw[0].tolist() if isinstance(sparse_ids_raw[0], (list, np.ndarray)) else sparse_ids_raw[0]
+            sparse_scores = sparse_scores_raw[0] if isinstance(sparse_scores_raw[0], (list, np.ndarray)) else sparse_scores_raw
             
-            # Fuse using RRF
-            rrf_k = self.config.rrf_k if self.config.rrf_k else 60
-            fused_ids = self._reciprocal_rank_fusion(dense_ids, sparse_ids, k=rrf_k)
+            # ---- Fusion ----
+            fusion_method = self.config.hybrid_fusion or "rrf"
             
-            # Return top k
+            if fusion_method == "rrf":
+                rrf_k = self.config.rrf_k if self.config.rrf_k else 60
+                fused_ids = self._reciprocal_rank_fusion(dense_ids, sparse_ids, k=rrf_k)
+            elif fusion_method == "weighted":
+                alpha = self.config.weighted_alpha if self.config.weighted_alpha is not None else 0.5
+                fused_ids = self._weighted_score_fusion(
+                    dense_ids, dense_scores,
+                    sparse_ids, sparse_scores,
+                    alpha=alpha
+                )
+            else:
+                raise ValueError(f"Unknown fusion method: {fusion_method}")
+            
             return fused_ids[:k]
         
         else:

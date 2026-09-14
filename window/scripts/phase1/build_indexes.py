@@ -32,7 +32,6 @@ logger.info(f"Loaded {len(chunks)} chunks")
 
 MODEL_NAME = "BAAI/bge-base-en-v1.5"
 model = SentenceTransformer(MODEL_NAME)
-# BGE models work best when you add a query prefix for queries, but for indexing we don't need it.
 
 
 # 2. Embed all chunks (batch processing)
