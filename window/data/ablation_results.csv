@@ -7,3 +7,5 @@ recall@1,precision@1,ndcg@1,recall@5,precision@5,ndcg@5,recall@10,precision@10,n
 0.0,0.0,0.0,1.0,0.2,0.6309297535714575,1.0,0.1,0.6309297535714575,,,,0.5,dense_rerank,Dense only (100 candidates) + cross-encoder reranker → top 8,149132.8,149132.8,149132.8
 1.0,1.0,1.0,1.0,0.2,1.0,1.0,0.1,1.0,,,,1.0,rerank_sweep_k25,"Hybrid RRF + BGE reranker, 25 candidates → top 8",202605.5,202605.5,202605.5
 0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,,,0.0,hybrid_rrf_rerank_contextual,"Hybrid RRF + reranker, with contextual retrieval (LLM context per chunk)",5823.2,5823.2,5823.2
+0.0,0.0,0.0,1.0,0.2,0.6309297535714575,1.0,0.1,0.6309297535714575,,,,0.5,hybrid_rrf_rerank,Hybrid RRF (100 candidates) + BGE cross-encoder reranker → top 8,178566.0,178566.0,178566.0
+1.0,1.0,1.0,1.0,0.2,1.0,1.0,0.1,1.0,,,,1.0,hybrid_rrf_rerank_parent,Hybrid RRF + reranker + parent-document retrieval (small-to-big),95136.3,95136.3,95136.3
