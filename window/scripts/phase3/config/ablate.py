@@ -16,6 +16,8 @@ import argparse
 from pathlib import Path
 import pandas as pd
 import logging
+import time
+import numpy as np
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parents[2]
@@ -38,7 +40,7 @@ RESULTS_MD = Path("README.md")  # or separate table file
 def run_experiment(config_path: Path):
     config = load_config(config_path)
     logger.info(f"Running experiment: {config.experiment_name}")
-    
+
     # 1. Load golden set (skip unanswerable for retrieval metrics)
     questions = []
     with open(GOLDEN_FILE, 'r', encoding='utf-8') as f:
@@ -47,36 +49,64 @@ def run_experiment(config_path: Path):
             if not q.get('is_unanswerable', False):
                 questions.append(q)
     logger.info(f"Loaded {len(questions)} answerable questions")
-    
-    # 2. Initialize pipeline
+
+    # 2. Initialize pipeline (must come before the retrieval loop)
     pipeline = RetrievalPipeline(config)
-    
-    # 3. Run retrieval for each question
+
+    # 3. Run retrieval for each question, collecting latencies
     results = []
     golds = []
+    latencies = []
+
     for idx, q in enumerate(questions):
         gold_ids = q.get('gold_chunk_ids', [])
         if not gold_ids:
             continue
-        retrieved_ids = pipeline.retrieve(q['question'], k=config.retrieve_k)
+
+        start = time.perf_counter()
+
+        if hasattr(pipeline, "retrieve_with_latency"):
+            # Detailed per-stage timing
+            result = pipeline.retrieve_with_latency(
+                q['question'], k=config.retrieve_k
+            )
+            retrieved_ids = result["retrieved_ids"]
+            latencies.append(result["retrieval_ms"] + result["rerank_ms"])
+        else:
+            # Fallback: just time the total call
+            retrieved_ids = pipeline.retrieve(q['question'], k=config.retrieve_k)
+            latencies.append((time.perf_counter() - start) * 1000)
+
         results.append({'query_id': idx, 'retrieved_ids': retrieved_ids})
         golds.append({'query_id': idx, 'gold_ids': gold_ids})
-    
+
     # 4. Compute metrics
     metrics = evaluate_retrieval(results, golds, config.k_values)
     metrics['experiment_name'] = config.experiment_name
     metrics['description'] = config.description
-    
+
+    if latencies:
+        p95_latency = float(np.percentile(latencies, 95))
+        median_latency = float(np.median(latencies))
+        metrics["p95_latency_ms"] = round(p95_latency, 1)
+        metrics["median_latency_ms"] = round(median_latency, 1)
+        metrics["mean_latency_ms"] = round(float(np.mean(latencies)), 1)
+    else:
+        # No queries ran — leave latency columns blank so CSV stays consistent
+        metrics["p95_latency_ms"] = None
+        metrics["median_latency_ms"] = None
+        metrics["mean_latency_ms"] = None
+
     # 5. Record in CSV
     df = pd.DataFrame([metrics])
     if RESULTS_CSV.exists():
         existing = pd.read_csv(RESULTS_CSV)
-        # Remove old entry with same experiment name (if re-running)
+        # Replace old entry with same experiment name (allows re-runs)
         existing = existing[existing['experiment_name'] != config.experiment_name]
         df = pd.concat([existing, df], ignore_index=True)
     df.to_csv(RESULTS_CSV, index=False)
     logger.info(f"Results appended to {RESULTS_CSV}")
-    
+
     return metrics
 
 def main():

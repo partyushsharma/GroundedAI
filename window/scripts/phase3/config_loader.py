@@ -21,7 +21,7 @@ class RetrievalConfig(BaseModel):
     sparse_index_path: Optional[str] = None
     
     retrieve_k: int = 100
-    reranker: Optional[Literal["bge-reranker-v2-m3"]] = None
+    reranker: Optional[Literal["bge-reranker-v2-m3", "bge-reranker-base", "bge-reranker-large"]] = None
     rerank_top_n: Optional[int] = 8
     
     query_transform: Optional[Literal["hyde", "multi_query", "decomposition"]] = None

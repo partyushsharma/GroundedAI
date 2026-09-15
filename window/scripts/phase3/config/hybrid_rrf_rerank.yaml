@@ -1,0 +1,22 @@
+experiment_name: "hybrid_rrf_rerank"
+description: "Hybrid RRF (100 candidates) + BGE cross-encoder reranker → top 8"
+
+embedding_model: "BAAI/bge-base-en-v1.5"
+normalize_embeddings: true
+
+index_type: "flat"
+faiss_index_path: "data/indexes/faiss.index"
+
+retrieval_type: "hybrid"
+hybrid_fusion: "rrf"
+rrf_k: 60
+sparse_index_path: "data/indexes/bm25_index"
+retrieve_k: 100          # retrieve 100 candidates for reranking
+
+reranker: "bge-reranker-v2-m3"
+rerank_top_n: 8          # keep top 8 after reranking
+
+query_transform: null
+diversity_filter: null
+
+k_values: [1, 5, 10]

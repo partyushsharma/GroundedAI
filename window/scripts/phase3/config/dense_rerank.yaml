@@ -1,0 +1,21 @@
+experiment_name: "dense_rerank"
+description: "Dense only (100 candidates) + cross-encoder reranker → top 8"
+
+embedding_model: "BAAI/bge-base-en-v1.5"
+normalize_embeddings: true
+
+index_type: "flat"
+faiss_index_path: "data/indexes/faiss.index"
+
+retrieval_type: "dense"
+hybrid_fusion: null
+sparse_index_path: null
+retrieve_k: 100
+
+reranker: "bge-reranker-v2-m3"
+rerank_top_n: 8
+
+query_transform: null
+diversity_filter: null
+
+k_values: [1, 5, 10]
