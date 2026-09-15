@@ -1,0 +1,3 @@
+Contextual retrieval is the technique where you prepend a short, LLM‑generated context line to each chunk before embedding it. The chunk alone often lacks context (“the limit is 50,000” — of what?), so a sentence like “This chunk is from the RBI Master Direction on KYC, Section 4.2, discussing cash transaction reporting limits.” dramatically improves retrieval.
+
+This is often the single biggest win in the project — but it only works if you cache aggressively. Regenerating context for 30k chunks on every rerun would burn through your free API quota in hours.

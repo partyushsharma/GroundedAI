@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
 
 # Configuration
 PDF_DIR = Path("data/raw")
@@ -34,8 +34,7 @@ OUTPUT_DIR = Path("data/golden")
 OUTPUT_FILE = OUTPUT_DIR / "raw_candidates.jsonl"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Use 1.5 Flash for its generous free tier limits
-MODEL_NAME = "models/gemini-3.5-flash"
+MODEL_NAME = "models/gemini-3.6-flash"
 
 def get_pdf_text(pdf_path: Path) -> str:
     """Extract full text from a PDF using your tiered parser."""

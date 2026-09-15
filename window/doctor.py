@@ -48,7 +48,7 @@ REQUIRED = [
     ("faiss-cpu",             "faiss"),
     ("chromadb",              "chromadb"),
     ("bm25s",                 "bm25s"),
-    ("pymupdf",               "fitz"),
+    ("pymupdf",               "pymupdf"),
     ("sentence-transformers", "sentence_transformers"),
     ("ragas",                 "ragas"),
     ("litellm",               "litellm"),   # version via importlib.metadata

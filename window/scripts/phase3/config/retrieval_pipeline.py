@@ -23,7 +23,7 @@ class RetrievalPipeline:
         self.config = config
         self.model = SentenceTransformer(config.embedding_model)
         self.faiss_index = faiss.read_index(config.faiss_index_path)
-        with open("data/indexes/metadata.json", 'r', encoding='utf-8') as f:
+        with open(config.metadata_path, 'r', encoding='utf-8') as f:
             self.metadata = json.load(f)
         
         # BM25 components
@@ -139,6 +139,11 @@ class RetrievalPipeline:
             candidate_k = k
             final_k = k
         
+        # Cap candidate_k to the number of available documents in metadata
+        num_docs = len(self.metadata) if hasattr(self, 'metadata') and self.metadata else candidate_k
+        candidate_k = min(candidate_k, num_docs)
+        final_k = min(final_k, num_docs)
+        
         # ---- 1. Base retrieval (dense / sparse / hybrid) ----
         if self.config.retrieval_type == "dense":
             emb = self.model.encode(
@@ -154,8 +159,8 @@ class RetrievalPipeline:
             candidate_ids = results[0].tolist()
         
         elif self.config.retrieval_type == "hybrid":
-            dense_k = min(candidate_k * 2, 500)
-            sparse_k = min(candidate_k * 2, 500)
+            dense_k = min(candidate_k * 2, num_docs)
+            sparse_k = min(candidate_k * 2, num_docs)
             
             emb = self.model.encode(
                 [query],

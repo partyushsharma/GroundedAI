@@ -1,7 +1,7 @@
 # pyrefly: ignore [missing-import]
 import os
 import shutil
-import fitz
+import pymupdf as fitz
 from pathlib import Path
 import logging
 from docling.document_converter import DocumentConverter

@@ -12,6 +12,7 @@ class RetrievalConfig(BaseModel):
     
     index_type: Literal["flat", "hnsw", "ivf"] = "flat"
     faiss_index_path: str
+    metadata_path: str = "data/indexes/metadata.json"
     chroma_collection: Optional[str] = None
     
     retrieval_type: Literal["dense", "sparse", "hybrid"] = "dense"

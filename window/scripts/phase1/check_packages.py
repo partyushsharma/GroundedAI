@@ -1,7 +1,8 @@
 import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
-import torch, faiss, chromadb, bm25s, fitz          # fitz = pymupdf
+import torch, faiss, chromadb, bm25s
+import pymupdf as fitz
 import sentence_transformers, ragas, litellm, pydantic
 import numpy as np
 
