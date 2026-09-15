@@ -37,6 +37,16 @@ GOLDEN_FILE = Path("data/golden/golden_set_with_unanswerable.jsonl")
 RESULTS_CSV = Path("data/ablation_results.csv")
 RESULTS_MD = Path("README.md")  # or separate table file
 
+def expand_gold_to_parents(gold_child_ids: list[int], parent_map: dict) -> list[int]:
+    """Map gold child chunk IDs to parent document IDs."""
+    child_to_parent = parent_map["child_to_parent"]
+    parent_ids = set()
+    for cid in gold_child_ids:
+        entry = child_to_parent.get(str(cid))
+        if entry:
+            parent_ids.add(entry["parent_id"])
+    return list(parent_ids)
+
 def run_experiment(config_path: Path):
     config = load_config(config_path)
     logger.info(f"Running experiment: {config.experiment_name}")
@@ -53,6 +63,13 @@ def run_experiment(config_path: Path):
     # 2. Initialize pipeline (must come before the retrieval loop)
     pipeline = RetrievalPipeline(config)
 
+    parent_map = None
+    if getattr(config, "use_parent_document", False):
+        map_path = Path("data/indexes/parent_child_map.json")
+        if map_path.exists():
+            with open(map_path, "r", encoding="utf-8") as f:
+                parent_map = json.load(f)
+
     # 3. Run retrieval for each question, collecting latencies
     results = []
     golds = []
@@ -62,6 +79,9 @@ def run_experiment(config_path: Path):
         gold_ids = q.get('gold_chunk_ids', [])
         if not gold_ids:
             continue
+
+        if parent_map:
+            gold_ids = expand_gold_to_parents(gold_ids, parent_map)
 
         start = time.perf_counter()
 

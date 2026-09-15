@@ -1,6 +1,5 @@
 # --- Secrets -------------------------------------------------------------
 # Never remove this line. See .env.example for the variable names.
-.env
 .window/env
 
 # --- Python --------------------------------------------------------------
@@ -42,3 +41,5 @@ chroma/
 # --- Model cache ---------------------------------------------------------
 # Fetched by scripts/fetch_models.py; ~4.6 GB.
 models/
+config.bat
+node_modules

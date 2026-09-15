@@ -32,6 +32,9 @@ class RetrievalConfig(BaseModel):
     diversity_filter: Optional[Literal["mmr"]] = None
     mmr_lambda: Optional[float] = 0.5
     
+    use_parent_document: bool = False
+    parent_window: int = 2
+    
     k_values: list[int] = [1, 5, 10, 20]
 
 def load_config(path: Path) -> RetrievalConfig:
