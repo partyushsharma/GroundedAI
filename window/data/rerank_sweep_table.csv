@@ -1,0 +1,2 @@
+k,recall@10,mrr,ndcg@10,p95_latency_ms
+25,1.0,1.0,1.0,202605.5

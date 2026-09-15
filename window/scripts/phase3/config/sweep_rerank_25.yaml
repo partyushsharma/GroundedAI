@@ -1,0 +1,22 @@
+experiment_name: "rerank_sweep_k25"
+description: "Hybrid RRF + BGE reranker, 25 candidates → top 8"
+
+embedding_model: "BAAI/bge-base-en-v1.5"
+normalize_embeddings: true
+
+index_type: "flat"
+faiss_index_path: "data/indexes/faiss.index"
+
+retrieval_type: "hybrid"
+hybrid_fusion: "rrf"
+rrf_k: 60
+sparse_index_path: "data/indexes/bm25_index"
+retrieve_k: 25              # <-- swept
+
+reranker: "bge-reranker-base"
+rerank_top_n: 8
+
+query_transform: null
+diversity_filter: null
+
+k_values: [1, 5, 10]

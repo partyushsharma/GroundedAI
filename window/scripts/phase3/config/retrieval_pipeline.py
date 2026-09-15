@@ -53,6 +53,7 @@ class RetrievalPipeline:
                 stem = tok_config.get("stem", True)
         
         self.stemmer = PorterStemmer() if stem else None
+        self.bm25_tokenizer = self._tokenize_query
 
     def _tokenize_query(self, query: str):
         stemmer_fn = (lambda tokens: [self.stemmer.stem(t) for t in tokens]) if self.stemmer else None

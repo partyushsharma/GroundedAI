@@ -112,26 +112,39 @@ def run_experiment(config_path: Path):
 def main():
     parser = argparse.ArgumentParser(description="Run ablation experiments")
     parser.add_argument('--config', type=str, help="Path to a single YAML config file")
-    parser.add_argument('--all', action='store_true', help="Run all configs in configs/")
+    parser.add_argument('--all', action='store_true', help="Run all configs in scripts/phase3/config/")
     args = parser.parse_args()
     
     if args.config:
         config_path = Path(args.config)
         # If the path doesn't exist as given (relative to cwd), try a series
         # of fallback base directories so common invocation styles all work:
-        #   hybrid_rrf.yaml              → SCRIPT_DIR/hybrid_rrf.yaml
-        #   phase3/config/hybrid_rrf.yaml → PROJECT_ROOT/scripts/phase3/...
-        #   scripts/phase3/config/...    → PROJECT_ROOT/scripts/phase3/...
+        #   hybrid_rrf.yaml                  → SCRIPT_DIR/hybrid_rrf.yaml
+        #   phase3/config/hybrid_rrf.yaml     → PROJECT_ROOT/scripts/phase3/...
+        #   scripts/phase3/configs/... (typo) → SCRIPT_DIR / sweep_rerank_25.yaml
         if not config_path.exists():
             fallbacks = [
+                SCRIPT_DIR / config_path.name,
                 SCRIPT_DIR / config_path,
                 PROJECT_ROOT / "scripts" / config_path,
                 PROJECT_ROOT / config_path,
             ]
+            if "configs" in str(config_path):
+                corrected = Path(str(config_path).replace("configs", "config"))
+                fallbacks.extend([
+                    corrected,
+                    PROJECT_ROOT / corrected,
+                    SCRIPT_DIR / corrected.name
+                ])
             for candidate in fallbacks:
                 if candidate.exists():
                     config_path = candidate
                     break
+
+        if not config_path.exists():
+            logger.error(f"Config file not found: {args.config} (searched in {SCRIPT_DIR})")
+            sys.exit(1)
+
         run_experiment(config_path)
     elif args.all:
         for config_path in SCRIPT_DIR.glob("*.yaml"):
