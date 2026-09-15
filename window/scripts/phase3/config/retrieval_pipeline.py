@@ -5,6 +5,7 @@
 #  RRF sidesteps this by using only the rank positions.
 ################################################################
 
+from transformers.models.audio_spectrogram_transformer import configuration_audio_spectrogram_transformer
 import json
 import faiss
 import time
@@ -20,6 +21,15 @@ from sentence_transformers import CrossEncoder
 logger = logging.getLogger(__name__)
 class RetrievalPipeline:
     def __init__(self, config: RetrievalConfig):
+        self.parent_map = None
+        self.parent_by_id = {}
+        if getattr(config, "use_parent_document", False):
+            map_path = Path("data/indexes/parent_child_map.json")
+            with open(map_path, "r", encoding="utf-8") as f:
+                self.parent_map = json.load(f)
+            self.parent_by_id = {p["parent_id"]: p for p in self.parent_map["parents"]}
+            logging.info(f"Loaded parent-child map ({len(self.parent_map['parents'])} parents)")
+
         self.config = config
         self.model = SentenceTransformer(config.embedding_model)
         self.faiss_index = faiss.read_index(config.faiss_index_path)
@@ -194,10 +204,18 @@ class RetrievalPipeline:
         # ---- 2. Reranking (if configured) ----
         if self.config.reranker:
             top_n = self.config.rerank_top_n or final_k
-            reranked_ids, _, _ = self.rerank(query, candidate_ids, top_n=top_n)
-            return reranked_ids
-        
-        return candidate_ids[:final_k]
+            # Important: rerank using CHILD text (not parent text)
+            top_rerank_n = top_n * 3 if getattr(self.config, "use_parent_document", False) else top_n
+            reranked_ids, _, _ = self.rerank(query, candidate_ids, top_n=top_rerank_n)
+        else:
+            reranked_ids = candidate_ids
+
+        # Collapse to parents if enabled
+        if getattr(self.config, "use_parent_document", False):
+            parent_ids = self._collapse_to_parents(reranked_ids, top_n=k)
+            return parent_ids
+
+        return reranked_ids[:final_k]
 
     def _load_reranker(self):
         model_map = {
@@ -266,22 +284,78 @@ class RetrievalPipeline:
         else:
             candidate_k = k
         
-        # (Reuse the base retrieval logic – simplest is to call retrieve() with reranker disabled internally)
-        # For simplicity, we call retrieve() with a monkey-patched config; cleaner approach below:
         original_reranker = self.config.reranker
+        original_use_parent = getattr(self.config, "use_parent_document", False)
         self.config.reranker = None
+        self.config.use_parent_document = False
         base_ids = self.retrieve(query, k=candidate_k)
         self.config.reranker = original_reranker
+        self.config.use_parent_document = original_use_parent
         result["retrieval_ms"] = (time.perf_counter() - start) * 1000
         
         # Reranking
         if self.config.reranker:
             start = time.perf_counter()
             top_n = self.config.rerank_top_n or k
-            reranked_ids, _, _ = self.rerank(query, base_ids, top_n=top_n)
+            top_rerank_n = top_n * 3 if getattr(self.config, "use_parent_document", False) else top_n
+            reranked_ids, _, _ = self.rerank(query, base_ids, top_n=top_rerank_n)
             result["rerank_ms"] = (time.perf_counter() - start) * 1000
-            result["retrieved_ids"] = reranked_ids
+            final_ids = reranked_ids
         else:
-            result["retrieved_ids"] = base_ids[:k]
+            final_ids = base_ids
+            
+        if getattr(self.config, "use_parent_document", False):
+            result["retrieved_ids"] = self._collapse_to_parents(final_ids, top_n=k)
+        else:
+            result["retrieved_ids"] = final_ids[:k]
         
         return result
+    
+    def _collapse_to_parents(self, child_ids: list[int], top_n: int) -> list[int]:
+        """
+        Given a ranked list of child chunk IDs, return parent IDs.
+        Deduplicate parents (keep the best-ranked child's parent).
+        """
+        if self.parent_map is None:
+            return child_ids[:top_n]
+
+        child_to_parent = self.parent_map["child_to_parent"]
+        seen_parents = set()
+        ordered_parents = []
+
+        for cid in child_ids:
+            # If the child is a parent itself (some pipelines do this) treat it directly
+            p_entry = child_to_parent.get(str(cid))
+            if p_entry is None:
+                continue
+            pid = p_entry["parent_id"]
+            if pid in seen_parents:
+                continue
+            seen_parents.add(pid)
+            ordered_parents.append(pid)
+            if len(ordered_parents) >= top_n:
+                break
+
+        return ordered_parents
+
+    def get_parent_text(self, parent_id: int) -> str:
+        """Fetch the full text of a parent passage."""
+        if self.parent_map is None:
+            raise ValueError("Parent-document map not loaded.")
+        if hasattr(self, 'parent_by_id') and parent_id in self.parent_by_id:
+            return self.parent_by_id[parent_id]["text"]
+        for p in self.parent_map["parents"]:
+            if p["parent_id"] == parent_id:
+                return p["text"]
+        raise KeyError(f"Parent {parent_id} not found")
+
+    def get_parent_children(self, parent_id: int) -> list[int]:
+        """Get child chunk IDs contained in a parent passage."""
+        if self.parent_map is None:
+            raise ValueError("Parent-document map not loaded.")
+        if hasattr(self, 'parent_by_id') and parent_id in self.parent_by_id:
+            return self.parent_by_id[parent_id]["child_ids"]
+        for p in self.parent_map["parents"]:
+            if p["parent_id"] == parent_id:
+                return p["child_ids"]
+        raise KeyError(f"Parent {parent_id} not found")
